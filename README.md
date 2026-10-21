@@ -32,9 +32,9 @@ wav = client.audio.speech.create(model="local", voice="st_F2", input="안녕하�
                                  response_format="wav", extra_body={"lang": "ko"}).content
 
 # 일본어를 한국인이 읽듯 한글 독음으로 바꿔 한국어 목소리로 읽기
-wav = client.audio.speech.create(model="local", voice="st_M3", input="夢ならいいのに", response_format="wav",
+wav = client.audio.speech.create(model="local", voice="st_M3", input="明日は晴れるといいね", response_format="wav",
                                  extra_body={"translit": "ja_to_hangul",
-                                             "translit_style": {"tsu": "ㅆ", "long_vowel": "keep"}}).content
+                                             "translit_style": {"tsu": "ㅅ", "long_vowel": "keep"}}).content
 
 # STT
 with open("clip.wav", "rb") as f:
