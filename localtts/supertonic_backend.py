@@ -24,7 +24,12 @@ def list_voices():
 def _engine():
     global _tts
     if _tts is None:
+        import onnxruntime as ort
+        import supertonic.loader
         from supertonic import TTS
+        if 'CUDAExecutionProvider' in ort.get_available_providers():  # onnxruntime-gpu installed
+            # supertonic only lists the CPU provider; CUDA/cuDNN DLLs come from torch (imported first)
+            supertonic.loader.DEFAULT_ONNX_PROVIDERS = ['CUDAExecutionProvider', 'CPUExecutionProvider']
         _tts = TTS()
     return _tts
 

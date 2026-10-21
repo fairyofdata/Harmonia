@@ -7,7 +7,7 @@
 | 종류 | 엔진 | 목소리 id | 언어 | 라이선스 |
 |---|---|---|---|---|
 | TTS | [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (GPU) | `jf_alpha` `jf_gongitsune` `jf_nezumi` `jf_tebukuro` `jm_kumo` 외 | 일본어 (영어·중국어 목소리는 spacy 필요, 아래 참고) | Apache-2.0 |
-| TTS | [Supertonic-3](https://github.com/supertone-inc/supertonic) (ONNX, CPU) | `st_M1`~`st_M5`, `st_F1`~`st_F5` | 31개 언어 (`lang`으로 지정: `ko`, `ja`, `en` …) | 가중치 OpenRAIL-M, SDK MIT |
+| TTS | [Supertonic-3](https://github.com/supertone-inc/supertonic) (ONNX, GPU 있으면 GPU) | `st_M1`~`st_M5`, `st_F1`~`st_F5` | 31개 언어 (`lang`으로 지정: `ko`, `ja`, `en` …) | 가중치 OpenRAIL-M, SDK MIT |
 | TTS | Windows 기본 음성 (OneCore) | `win_haruka` `win_ayumi` `win_ichiro` (일본어), `win_heami` (한국어) | 설치된 언어 팩에 따름 | Windows |
 | STT | Whisper large-v3 (GPU fp16) | — | 다국어, 언어 자동 감지 또는 지정 | MIT |
 | 변환 | 일본어 → 한국인식 한글 독음 (`ja_to_hangul`) | — | — | 이 저장소 |
@@ -114,4 +114,7 @@ venv\Scripts\python -m pip install --no-deps -e .
 - **spacy**는 3.14 빌드가 없어 영어·중국어 Kokoro 목소리는 쓸 수 없습니다.
   - 일본어는 spacy 없이 동작하도록 빈 대체 모듈을 끼웁니다.
   - 영어가 필요하면 Supertonic(`st_*`, `lang="en"`)을 쓰면 됩니다.
+- **Supertonic GPU 실행:** 패키지 기본값은 CPU 전용입니다. onnxruntime-gpu가 깔려 있으면 백엔드가 CUDA 실행기를 켭니다.
+  - 9.5초 음성 기준 CPU 9.2초 → GPU 0.17초로 빨라졌습니다.
+  - onnxruntime-gpu 1.31은 CUDA 13 DLL(`cublasLt64_13.dll`)을 요구해서, torch cu126과 맞는 1.24.1로 고정했습니다. 필요한 CUDA·cuDNN DLL은 먼저 불러온 torch가 제공합니다.
 - **torch와 winrt** 순서: winrt를 먼저 불러오면 torch DLL 초기화가 실패(WinError 1114)해서, 패키지가 torch를 먼저 불러옵니다.

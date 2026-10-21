@@ -29,4 +29,4 @@ winrt-Windows.Foundation.Collections
 addict
 pyopenjtalk-plus
 supertonic
-onnxruntime
+onnxruntime-gpu==1.24.1  # works with CUDA 12 (torch cu126); 1.31 needs CUDA 13. CPU-only: onnxruntime
