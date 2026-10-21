@@ -52,6 +52,24 @@ def _make_supported(tts, text):
     return text if ok else ''.join(c for c in text if c not in set(bad))
 
 
+MAX_CHUNK_CHARS = 80  # the vector estimator attends over at most 1000 latent frames per chunk
+
+
+def _chunks(text):
+    """Supertonic splits only at sentence punctuation; long unpunctuated text (e.g. Hangul
+    readings) overflows its attention window, so split further at spaces."""
+    out, cur = [], ''
+    for word in text.split(' '):
+        if cur and len(cur) + 1 + len(word) > MAX_CHUNK_CHARS:
+            out.append(cur)
+            cur = word
+        else:
+            cur = f'{cur} {word}' if cur else word
+    if cur:
+        out.append(cur)
+    return out
+
+
 def synthesize(text, voice, speed=1.0, lang=None):
     style_name = voice[len(PREFIX):]
     if style_name not in STYLES:
@@ -61,5 +79,10 @@ def synthesize(text, voice, speed=1.0, lang=None):
         text = _make_supported(tts, text)
         if style_name not in _styles:
             _styles[style_name] = tts.get_voice_style(style_name)
-        wav, _ = tts.synthesize(text, voice_style=_styles[style_name], lang=lang, speed=speed)
-    return np.asarray(wav, dtype='float32').squeeze(), tts.sample_rate
+        pieces = [tts.synthesize(chunk, voice_style=_styles[style_name], lang=lang, speed=speed)[0]
+                  for chunk in _chunks(text)]
+    pause = np.zeros(int(0.15 * tts.sample_rate), dtype='float32')
+    audio = []
+    for i, p in enumerate(pieces):
+        audio.extend([np.asarray(p, dtype='float32').squeeze()] + ([pause] if i < len(pieces) - 1 else []))
+    return np.concatenate(audio), tts.sample_rate
