@@ -1,0 +1,32 @@
+# torch with CUDA (or CPU) first, e.g.:
+#   pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu126
+# kokoro / misaki pin numpy==1.26.4 (no Python 3.14 wheel), so install them with --no-deps:
+#   pip install --no-deps kokoro misaki
+# English Kokoro voices also need spacy + spacy-curated-transformers (no Python 3.14 build yet).
+# and everything else from this file:
+numpy
+scipy
+soundfile
+transformers
+huggingface-hub
+loguru
+regex
+num2words
+phonemizer-fork
+espeakng-loader
+fugashi
+unidic-lite
+jaconv
+fastapi
+uvicorn
+python-multipart
+pydantic
+winrt-runtime
+winrt-Windows.Media.SpeechSynthesis
+winrt-Windows.Storage.Streams
+winrt-Windows.Foundation
+winrt-Windows.Foundation.Collections
+addict
+pyopenjtalk-plus
+supertonic
+onnxruntime
