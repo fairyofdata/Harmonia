@@ -105,6 +105,10 @@ venv\Scripts\python -m pip install --no-deps -e .
 
 모델 가중치(Whisper large-v3 약 3GB, Kokoro, Supertonic)는 처음 쓸 때 Hugging Face 캐시(`~/.cache/huggingface`)로 받습니다. GPU 메모리는 Whisper와 Kokoro를 함께 올려도 약 4.5GB(RTX 3070 8GB에서 확인)입니다.
 
+## 결정 기록
+
+설계 결정과 그 이유는 [docs/adr/](docs/adr/README.md)에 있습니다.
+
 ## Python 3.14에서 우회한 것
 
 - **kokoro**는 `numpy==1.26.4`를 고정하는데 3.14용 빌드가 없습니다. 그래서 `--no-deps`로 설치합니다(최신 numpy로 동작 확인).
