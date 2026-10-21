@@ -29,12 +29,31 @@ def _engine():
     return _tts
 
 
+def _make_supported(tts, text):
+    """Rewrite words with characters outside the model's vocabulary (rare kanji) as their
+    UniDic kana reading; drop whatever is still unsupported."""
+    proc = tts.model.text_processor
+    ok, bad = proc.validate_text(text)
+    if ok:
+        return text
+    import fugashi
+    bad = set(bad)
+    parts = []
+    for w in fugashi.Tagger()(text):
+        kana = getattr(w.feature, 'kana', None)
+        parts.append(w.white_space + (kana if bad & set(w.surface) and kana and kana != '*' else w.surface))
+    text = ''.join(parts)
+    ok, bad = proc.validate_text(text)
+    return text if ok else ''.join(c for c in text if c not in set(bad))
+
+
 def synthesize(text, voice, speed=1.0, lang=None):
     style_name = voice[len(PREFIX):]
     if style_name not in STYLES:
         raise ValueError(f'unknown supertonic voice: {voice}')
     with _lock:
         tts = _engine()
+        text = _make_supported(tts, text)
         if style_name not in _styles:
             _styles[style_name] = tts.get_voice_style(style_name)
         wav, _ = tts.synthesize(text, voice_style=_styles[style_name], lang=lang, speed=speed)
