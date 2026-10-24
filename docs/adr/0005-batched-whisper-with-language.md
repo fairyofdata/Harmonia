@@ -1,4 +1,4 @@
-# ADR-0005: Whisper는 직접 일괄 호출하고 감지 언어를 함께 돌려준다
+# ADR-0005: Whisper는 직접 일괄 호출하고 감지 언어를 함께 반환한다
 
 - 상태: 채택
 - 결정일: 2026-10-21
@@ -12,7 +12,7 @@
 
 ## 결정
 - `WhisperProcessor`와 `generate`로 8개씩 묶어 처리한다.
-- 언어를 지정하지 않으면 `detect_language`(generate가 쓰는 것과 같은 판정)로 먼저 감지한다. 그 언어를 `generate`에 넘기고, 결과에 ISO 코드로 함께 돌려준다.
+- 언어를 지정하지 않으면 `detect_language`(generate가 쓰는 것과 같은 판정)로 먼저 감지한다. 그 언어를 `generate`에 넘기고, 결과에 ISO 코드로 함께 반환한다.
 - 단건 `transcribe`도 같은 경로를 쓴다(결과 형식 통일).
 
 ## 결과
