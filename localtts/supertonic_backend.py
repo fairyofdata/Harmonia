@@ -56,10 +56,17 @@ MAX_CHUNK_CHARS = 80  # the vector estimator attends over at most 1000 latent fr
 
 
 def _chunks(text):
-    """Supertonic splits only at sentence punctuation; long unpunctuated text (e.g. Hangul
-    readings) overflows its attention window, so split further at spaces."""
+    """Supertonic splits only at sentence punctuation; long unpunctuated text overflows
+    its attention window (the tail comes out garbled or dropped), so split further at
+    spaces -- and at characters where there are none, as in Japanese and Chinese."""
     out, cur = [], ''
     for word in text.split(' '):
+        while len(word) > MAX_CHUNK_CHARS:
+            if cur:
+                out.append(cur)
+                cur = ''
+            out.append(word[:MAX_CHUNK_CHARS])
+            word = word[MAX_CHUNK_CHARS:]
         if cur and len(cur) + 1 + len(word) > MAX_CHUNK_CHARS:
             out.append(cur)
             cur = word
