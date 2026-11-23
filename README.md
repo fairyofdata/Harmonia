@@ -1,6 +1,9 @@
 # LocalTTS
 
-이 PC에서 동작하는 음성 합성(TTS)·음성 인식(STT) 도구입니다. OpenAI API와 같은 형식의 HTTP 서버로 열려 있어서, 다른 프로젝트에서는 `base_url`만 바꾸면 그대로 쓸 수 있습니다. 클라우드 호출과 비용이 없습니다.
+이 PC에서 동작하는 음성 합성(TTS)·음성 인식(STT) 도구입니다. 클라우드 호출과 비용이 없습니다. 다른 프로젝트에서 쓰는 길이 두 가지입니다.
+
+- **HTTP 서버**: OpenAI API와 같은 형식이라 `base_url`만 바꾸면 됩니다 ([아래](#서버로-쓰기-다른-프로젝트에서)).
+- **MCP 서버**: 에이전트가 도구로 직접 부릅니다 ([아래](#mcp로-쓰기-다른-프로젝트의-에이전트에서)).
 
 ## 들어 있는 것
 
@@ -14,12 +17,12 @@
 
 `python -m localtts voices`로 이 PC에서 쓸 수 있는 목소리 목록을 봅니다.
 
-Supertonic은 어휘에 없는 글자(드문 한자 등)가 있으면 오류를 냅니다. 그래서 그런 글자가 든 단어는 UniDic의 가나 읽기로 바꿔 읽고, 그래도 남는 글자는 빼고 읽습니다.
+Supertonic은 어휘에 없는 글자(드문 한자 등)가 있으면 오류를 냅니다. 그래서 그런 글자가 든 단어는 UniDic의 가나 읽기로 바꿔 읽고, 그래도 남는 글자는 빼고 읽습니다. 또 한 번에 처리할 수 있는 길이에 한계가 있어서 긴 글은 80자 조각으로 나눠 합성하고 조각 사이에 0.15초 쉼을 둡니다(공백이 없는 일본어·중국어는 글자 수로 끊습니다).
 
 ## 서버로 쓰기 (다른 프로젝트에서)
 
 ```bash
-C:\Users\fairy\LocalTTS\venv\Scripts\python.exe -m localtts serve --port 8880
+C:\Users\fairy\gitdev\LocalTTS\venv\Scripts\python.exe -m localtts serve --port 8880
 ```
 
 `127.0.0.1`에만 열리므로 외부에서는 접근할 수 없습니다.
@@ -57,8 +60,23 @@ OpenAI API에 없는 확장:
 
 ## MCP로 쓰기 (다른 프로젝트의 에이전트에서)
 
+Claude Code 설정(`~/.claude.json`)의 최상위 `mcpServers`에 넣으면 모든 프로젝트에서 보입니다.
+
+```json
+"localtts": {
+  "type": "stdio",
+  "command": "C:\\Users\\fairy\\gitdev\\LocalTTS\\venv\\Scripts\\python.exe",
+  "args": ["-m", "localtts_mcp"],
+  "env": {}
+}
+```
+
+`command`는 **이 프로젝트 venv의 python**이어야 합니다. `mcp`와 `localtts`가 거기에만 깔려 있고, 서버를 자동으로 띄울 때도 이 파이썬을 씁니다. 고친 뒤에는 앱(또는 `claude`)을 다시 시작해야 잡힙니다.
+
+`claude` CLI가 깔려 있다면 같은 자리에 넣어 줍니다. `-s user`가 없으면 명령을 실행한 폴더에서만 보입니다.
+
 ```bash
-claude mcp add localtts -- C:\Users\fairy\gitdev\LocalTTS\venv\Scripts\python.exe -m localtts_mcp
+claude mcp add localtts -s user -- C:\Users\fairy\gitdev\LocalTTS\venv\Scripts\python.exe -m localtts_mcp
 ```
 
 도구 다섯 개가 붙습니다.
@@ -82,12 +100,12 @@ MCP 서버는 위의 HTTP 서버에 요청만 전달하는 얇은 프록시입�
 | `LOCALTTS_AUTOSTART` | `1` (`0`이면 서버를 직접 띄워 둬야 합니다) |
 | `LOCALTTS_PYTHON` | 이 MCP 서버를 실행한 파이썬 (서버를 띄울 때 씁니다) |
 
-첫 `transcribe` 호출은 Whisper 가중치(약 3GB)를 받느라 오래 걸릴 수 있습니다. 미리 `python -m localtts transcribe`를 한 번 돌려 두면 이후로는 바로 응답합니다.
+서버가 새로 뜬 뒤 첫 `transcribe`는 Whisper 가중치를 GPU로 올리느라 10초 안팎 걸리고(맨 처음 한 번은 약 3GB를 내려받습니다), 그다음부터는 바로 응답합니다. `synthesize`는 1초 안팎입니다.
 
 ## Python에서 바로 쓰기
 
 ```python
-import sys; sys.path.insert(0, r"C:\Users\fairy\LocalTTS")   # 또는 이 venv에서 실행
+import sys; sys.path.insert(0, r"C:\Users\fairy\gitdev\LocalTTS")   # 또는 이 venv에서 실행
 import localtts
 audio, sr = localtts.synthesize("こんにちは", voice="jf_alpha")
 localtts.save_wav("out.wav", audio, sr)
@@ -141,7 +159,7 @@ venv\Scripts\python -m pip install --no-deps -e .
 venv\Scripts\python -X utf8 -m unittest discover -s tests
 ```
 
-모델도 GPU도 쓰지 않아 1초 안에 끝납니다. 검사하는 것은 정답이 정해져 있는 두 곳입니다.
+33개, 모델도 GPU도 쓰지 않아 0.1초 안에 끝납니다. 검사하는 것은 정답이 정해져 있는 두 곳입니다.
 
 - **독음 규칙** (`jp2hangul`): っ·ん 받침, ス·ズ, ファ행, 요음, 띄어쓰기 같은 항상 적용되는 규칙과, `translit_style` 네 가지 옵션을 양쪽 값에서 하나씩. 옵션 조합 24가지 전부에 대해 **가나가 한 글자도 남지 않는지**도 봅니다(새 규칙이 기존 가나를 빠뜨리면 여기서 걸립니다).
 - **긴 글 분할** (`supertonic_backend._chunks`): 모든 덩이가 한계 이하인지, 빈 덩이가 없는지, 글자가 사라지지 않는지, 경계(79/80/81자)에서 어떻게 잘리는지.
