@@ -6,6 +6,8 @@
     POST /v1/audio/transcriptions   multipart: file, model?, language?, response_format? (json|verbose_json|text)
     POST /v1/batch/transcriptions   {"files_b64": [...], "language"?, "model"?} -> {"results": [verbose_json, ...]}
                                     (not in the OpenAI API; batches clips on the GPU)
+    POST /v1/translit               {"text", "translit"?, "translit_style"?} -> {"text"}
+                                    (not in the OpenAI API; reading conversion alone)
     GET  /v1/voices                 -> available voices
     GET  /health
 
@@ -44,6 +46,21 @@ def health():
 @app.get('/v1/voices')
 def voices():
     return {'voices': localtts.list_voices()}
+
+
+class TranslitRequest(BaseModel):
+    text: str
+    translit: str = 'ja_to_hangul'
+    translit_style: dict | None = None
+
+
+@app.post('/v1/translit')
+def translit(req: TranslitRequest):
+    """Reading conversion on its own, without synthesizing (not in the OpenAI API)."""
+    try:
+        return {'text': localtts._translit(req.translit, req.text, req.translit_style)}
+    except ValueError as e:
+        raise HTTPException(400, str(e))
 
 
 @app.post('/v1/audio/speech')

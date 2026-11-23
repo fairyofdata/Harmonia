@@ -52,7 +52,37 @@ OpenAI API에 없는 확장:
 | `POST /v1/audio/speech`의 `lang` | Supertonic 목소리의 언어 코드 |
 | `POST /v1/audio/speech`의 `pitch` | Windows 목소리의 음높이 (0.0~2.0) |
 | `POST /v1/batch/transcriptions` | `{"files_b64": [...], "language": null}` → 여러 클립을 GPU에서 한 번에 받아쓰기 (클립당 약 0.3초) |
+| `POST /v1/translit` | `{"text": "...", "translit_style": {...}}` → 합성 없이 독음만 변환 |
 | `GET /v1/voices` | 목소리 목록 |
+
+## MCP로 쓰기 (다른 프로젝트의 에이전트에서)
+
+```bash
+claude mcp add localtts -- C:\Users\fairy\gitdev\LocalTTS\venv\Scripts\python.exe -m localtts_mcp
+```
+
+도구 다섯 개가 붙습니다.
+
+| 도구 | 하는 일 |
+|---|---|
+| `list_voices` | 이 PC의 목소리 목록 |
+| `synthesize` | 글 → wav 파일로 저장하고 `{path, seconds, sample_rate}` 반환 (소리를 바로 들려주지는 않습니다) |
+| `transcribe` | 오디오 파일 → `{text, language, duration}` |
+| `transcribe_many` | 여러 파일을 GPU에서 한 번에 (클립당 약 0.3초) |
+| `ja_to_hangul` | 일본어 → 한글 독음 |
+
+MCP 서버는 위의 HTTP 서버에 요청만 전달하는 얇은 프록시입니다. 서버가 안 떠 있으면 **처음 호출할 때 백그라운드로 띄웁니다.** 그래서 동시에 여러 프로젝트에서 불러도 모델은 이 PC에 한 벌만 올라가고, MCP 프로세스 자체는 모델을 들고 있지 않습니다(torch도 부르지 않아 0.7초면 뜹니다). 이 때문에 `localtts_mcp.py`는 패키지 밖에 있습니다 — `localtts`를 import하면 torch가 따라옵니다.
+
+자동으로 띄운 서버는 **MCP 클라이언트가 끝날 때 같이 내려갈 수 있습니다.** MCP 클라이언트가 서버 프로세스를 잡 오브젝트에 넣고 종료 시 통째로 정리하기 때문입니다(확인함). 다시 부르면 알아서 올라오고, 가중치는 로컬 캐시에서 읽으므로 몇 초면 됩니다. 계속 띄워 두고 싶으면 `python -m localtts serve`를 직접 실행해 두면 됩니다. 그 서버는 MCP가 건드리지 않습니다.
+
+| 환경 변수 | 기본값 |
+|---|---|
+| `LOCALTTS_URL` | `http://127.0.0.1:8880` |
+| `LOCALTTS_OUT_DIR` | `<temp>/localtts` (합성한 wav와 서버 로그가 쌓이는 곳) |
+| `LOCALTTS_AUTOSTART` | `1` (`0`이면 서버를 직접 띄워 둬야 합니다) |
+| `LOCALTTS_PYTHON` | 이 MCP 서버를 실행한 파이썬 (서버를 띄울 때 씁니다) |
+
+첫 `transcribe` 호출은 Whisper 가중치(약 3GB)를 받느라 오래 걸릴 수 있습니다. 미리 `python -m localtts transcribe`를 한 번 돌려 두면 이후로는 바로 응답합니다.
 
 ## Python에서 바로 쓰기
 
@@ -104,6 +134,19 @@ venv\Scripts\python -m pip install --no-deps -e .
 ```
 
 모델 가중치(Whisper large-v3 약 3GB, Kokoro, Supertonic)는 처음 쓸 때 Hugging Face 캐시(`~/.cache/huggingface`)로 받습니다. GPU 메모리는 Whisper와 Kokoro를 함께 올려도 약 4.5GB(RTX 3070 8GB에서 확인)입니다.
+
+## 테스트
+
+```bash
+venv\Scripts\python -X utf8 -m unittest discover -s tests
+```
+
+모델도 GPU도 쓰지 않아 1초 안에 끝납니다. 검사하는 것은 정답이 정해져 있는 두 곳입니다.
+
+- **독음 규칙** (`jp2hangul`): っ·ん 받침, ス·ズ, ファ행, 요음, 띄어쓰기 같은 항상 적용되는 규칙과, `translit_style` 네 가지 옵션을 양쪽 값에서 하나씩. 옵션 조합 24가지 전부에 대해 **가나가 한 글자도 남지 않는지**도 봅니다(새 규칙이 기존 가나를 빠뜨리면 여기서 걸립니다).
+- **긴 글 분할** (`supertonic_backend._chunks`): 모든 덩이가 한계 이하인지, 빈 덩이가 없는지, 글자가 사라지지 않는지, 경계(79/80/81자)에서 어떻게 잘리는지.
+
+음성 자체는 자동으로 검사할 수 없습니다. 귀로 확인하거나, 합성한 wav를 Whisper로 받아쓰기해서 입력과 비교하는 방법을 씁니다(`_chunks`의 80자 한계도 그렇게 확인했습니다).
 
 ## 결정 기록
 
