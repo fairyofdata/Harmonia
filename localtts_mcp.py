@@ -1,7 +1,7 @@
 r"""MCP server for LocalTTS: this PC's speech synthesis and transcription as MCP tools,
 so any project (Claude Code, an editor, your own agent) can call them.
 
-    claude mcp add localtts -- C:\Users\fairy\gitdev\LocalTTS\venv\Scripts\python.exe -m localtts_mcp
+    claude mcp add localtts -- <LocalTTS 폴더>\venv\Scripts\python.exe -m localtts_mcp
 
 It is a thin proxy over the HTTP server (`python -m localtts serve`): every tool is one
 HTTP call, and the server is started in the background on first use if it is not already

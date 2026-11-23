@@ -22,7 +22,7 @@ Supertonic은 어휘에 없는 글자(드문 한자 등)가 있으면 오류를 
 ## 서버로 쓰기 (다른 프로젝트에서)
 
 ```bash
-C:\Users\fairy\gitdev\LocalTTS\venv\Scripts\python.exe -m localtts serve --port 8880
+<LocalTTS 폴더>\venv\Scripts\python.exe -m localtts serve --port 8880
 ```
 
 `127.0.0.1`에만 열리므로 외부에서는 접근할 수 없습니다.
@@ -65,7 +65,7 @@ Claude Code 설정(`~/.claude.json`)의 최상위 `mcpServers`에 넣으면 모�
 ```json
 "localtts": {
   "type": "stdio",
-  "command": "C:\\Users\\fairy\\gitdev\\LocalTTS\\venv\\Scripts\\python.exe",
+  "command": "<LocalTTS 폴더>\\venv\\Scripts\\python.exe",
   "args": ["-m", "localtts_mcp"],
   "env": {}
 }
@@ -76,7 +76,7 @@ Claude Code 설정(`~/.claude.json`)의 최상위 `mcpServers`에 넣으면 모�
 `claude` CLI가 깔려 있다면 같은 자리에 넣어 줍니다. `-s user`가 없으면 명령을 실행한 폴더에서만 보입니다.
 
 ```bash
-claude mcp add localtts -s user -- C:\Users\fairy\gitdev\LocalTTS\venv\Scripts\python.exe -m localtts_mcp
+claude mcp add localtts -s user -- <LocalTTS 폴더>\venv\Scripts\python.exe -m localtts_mcp
 ```
 
 도구 다섯 개가 붙습니다.
@@ -105,7 +105,7 @@ MCP 서버는 위의 HTTP 서버에 요청만 전달하는 얇은 프록시입�
 ## Python에서 바로 쓰기
 
 ```python
-import sys; sys.path.insert(0, r"C:\Users\fairy\gitdev\LocalTTS")   # 또는 이 venv에서 실행
+import sys; sys.path.insert(0, r"<LocalTTS 폴더>")   # 또는 이 venv에서 실행
 import localtts
 audio, sr = localtts.synthesize("こんにちは", voice="jf_alpha")
 localtts.save_wav("out.wav", audio, sr)
