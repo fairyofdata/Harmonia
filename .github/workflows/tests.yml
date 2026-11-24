@@ -1,0 +1,24 @@
+# Run the unit tests on every push. No deployment.
+# The tests (Japanese-to-Hangul rules, Supertonic text chunking) need no GPU or model weights:
+# only numpy and the fugashi tokenizer with its small dictionary.
+# Steps come from the shared reusable workflows in fairyofdata/Concordia.
+name: tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    uses: fairyofdata/Concordia/.github/workflows/python-tests.yml@v1
+    with:
+      python-versions: '["3.12"]'
+      install: python -m pip install numpy fugashi unidic-lite
+      test: python -m unittest discover -s tests
+
+  hygiene:
+    uses: fairyofdata/Concordia/.github/workflows/hygiene.yml@v1
