@@ -1,0 +1,191 @@
+<!-- 원본: README_KR.md (한국어판이 원본, 영·일은 번역) · 동기화: 2026-11-24 -->
+
+# LocalTTS
+
+이 PC에서 동작하는 음성 합성(TTS)·음성 인식(STT) 도구입니다. 클라우드 호출과 비용이 없습니다. 다른 프로젝트에서 쓰는 길이 두 가지입니다.
+
+- **HTTP 서버**: OpenAI API와 같은 형식이라 `base_url`만 바꾸면 됩니다 ([아래](#서버로-쓰기-다른-프로젝트에서)).
+- **MCP 서버**: 에이전트가 도구로 직접 부릅니다 ([아래](#mcp로-쓰기-다른-프로젝트의-에이전트에서)).
+
+## 들어 있는 것
+
+| 종류 | 엔진 | 목소리 id | 언어 | 라이선스 |
+|---|---|---|---|---|
+| TTS | [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M) (GPU) | `jf_alpha` `jf_gongitsune` `jf_nezumi` `jf_tebukuro` `jm_kumo` 외 | 일본어 (영어·중국어 목소리는 spacy 필요, 아래 참고) | Apache-2.0 |
+| TTS | [Supertonic-3](https://github.com/supertone-inc/supertonic) (ONNX, GPU 있으면 GPU) | `st_M1`~`st_M5`, `st_F1`~`st_F5` | 31개 언어 (`lang`으로 지정: `ko`, `ja`, `en` …) | 가중치 OpenRAIL-M, SDK MIT |
+| TTS | Windows 기본 음성 (OneCore) | `win_haruka` `win_ayumi` `win_ichiro` (일본어), `win_heami` (한국어) | 설치된 언어 팩에 따름 | Windows |
+| STT | Whisper large-v3 (GPU fp16) | — | 다국어, 언어 자동 감지 또는 지정 | MIT |
+| 변환 | 일본어 → 한국인식 한글 독음 (`ja_to_hangul`) | — | — | 이 저장소 |
+
+`python -m localtts voices`로 이 PC에서 쓸 수 있는 목소리 목록을 봅니다.
+
+Supertonic은 어휘에 없는 글자(드문 한자 등)가 있으면 오류를 냅니다. 그래서 그런 글자가 든 단어는 UniDic의 가나 읽기로 바꿔 읽고, 그래도 남는 글자는 빼고 읽습니다. 또 한 번에 처리할 수 있는 길이에 한계가 있어서 긴 글은 80자 조각으로 나눠 합성하고 조각 사이에 0.15초 쉼을 둡니다(공백이 없는 일본어·중국어는 글자 수로 끊습니다).
+
+## 서버로 쓰기 (다른 프로젝트에서)
+
+```bash
+<LocalTTS 폴더>\venv\Scripts\python.exe -m localtts serve --port 8880
+```
+
+`127.0.0.1`에만 열리므로 외부에서는 접근할 수 없습니다.
+
+```python
+from openai import OpenAI
+
+client = OpenAI(base_url="http://127.0.0.1:8880/v1", api_key="local")
+
+# TTS (wav만 지원, ffmpeg 없음)
+wav = client.audio.speech.create(model="local", voice="st_F2", input="안녕하세요",
+                                 response_format="wav", extra_body={"lang": "ko"}).content
+
+# 일본어를 한국인이 읽듯 한글 독음으로 바꿔 한국어 목소리로 읽기
+wav = client.audio.speech.create(model="local", voice="st_M3", input="明日は晴れるといいね", response_format="wav",
+                                 extra_body={"translit": "ja_to_hangul",
+                                             "translit_style": {"tsu": "ㅅ", "long_vowel": "keep"}}).content
+
+# STT
+with open("clip.wav", "rb") as f:
+    r = client.audio.transcriptions.create(model="whisper-large-v3", file=f, response_format="verbose_json")
+print(r.text, r.language)
+```
+
+OpenAI API에 없는 확장:
+
+| 엔드포인트 / 필드 | 설명 |
+|---|---|
+| `POST /v1/audio/speech`의 `translit`, `translit_style` | `ja_to_hangul` 독음 변환과 그 표기 방식 |
+| `POST /v1/audio/speech`의 `lang` | Supertonic 목소리의 언어 코드 |
+| `POST /v1/audio/speech`의 `pitch` | Windows 목소리의 음높이 (0.0~2.0) |
+| `POST /v1/batch/transcriptions` | `{"files_b64": [...], "language": null}` → 여러 클립을 GPU에서 한 번에 받아쓰기 (클립당 약 0.3초) |
+| `POST /v1/translit` | `{"text": "...", "translit_style": {...}}` → 합성 없이 독음만 변환 |
+| `GET /v1/voices` | 목소리 목록 |
+
+## MCP로 쓰기 (다른 프로젝트의 에이전트에서)
+
+Claude Code 설정(`~/.claude.json`)의 최상위 `mcpServers`에 넣으면 모든 프로젝트에서 보입니다.
+
+```json
+"localtts": {
+  "type": "stdio",
+  "command": "<LocalTTS 폴더>\\venv\\Scripts\\python.exe",
+  "args": ["-m", "localtts_mcp"],
+  "env": {}
+}
+```
+
+`command`는 **이 프로젝트 venv의 python**이어야 합니다. `mcp`와 `localtts`가 거기에만 깔려 있고, 서버를 자동으로 띄울 때도 이 파이썬을 씁니다. 고친 뒤에는 앱(또는 `claude`)을 다시 시작해야 잡힙니다.
+
+`claude` CLI가 깔려 있다면 같은 자리에 넣어 줍니다. `-s user`가 없으면 명령을 실행한 폴더에서만 보입니다.
+
+```bash
+claude mcp add localtts -s user -- <LocalTTS 폴더>\venv\Scripts\python.exe -m localtts_mcp
+```
+
+도구 다섯 개가 붙습니다.
+
+| 도구 | 하는 일 |
+|---|---|
+| `list_voices` | 이 PC의 목소리 목록 |
+| `synthesize` | 글 → wav 파일로 저장하고 `{path, seconds, sample_rate}` 반환 (소리를 바로 들려주지는 않습니다) |
+| `transcribe` | 오디오 파일 → `{text, language, duration}` |
+| `transcribe_many` | 여러 파일을 GPU에서 한 번에 (클립당 약 0.3초) |
+| `ja_to_hangul` | 일본어 → 한글 독음 |
+
+MCP 서버는 위의 HTTP 서버에 요청만 전달하는 얇은 프록시입니다. 서버가 안 떠 있으면 **처음 호출할 때 백그라운드로 띄웁니다.** 그래서 동시에 여러 프로젝트에서 불러도 모델은 이 PC에 한 벌만 올라가고, MCP 프로세스 자체는 모델을 들고 있지 않습니다(torch도 부르지 않아 0.7초면 뜹니다). 이 때문에 `localtts_mcp.py`는 패키지 밖에 있습니다 — `localtts`를 import하면 torch가 따라옵니다.
+
+자동으로 띄운 서버는 **MCP 클라이언트가 끝날 때 같이 내려갈 수 있습니다.** MCP 클라이언트가 서버 프로세스를 잡 오브젝트에 넣고 종료 시 통째로 정리하기 때문입니다(확인함). 다시 부르면 알아서 올라오고, 가중치는 로컬 캐시에서 읽으므로 몇 초면 됩니다. 계속 띄워 두고 싶으면 `python -m localtts serve`를 직접 실행해 두면 됩니다. 그 서버는 MCP가 건드리지 않습니다.
+
+| 환경 변수 | 기본값 |
+|---|---|
+| `LOCALTTS_URL` | `http://127.0.0.1:8880` |
+| `LOCALTTS_OUT_DIR` | `<temp>/localtts` (합성한 wav와 서버 로그가 쌓이는 곳) |
+| `LOCALTTS_AUTOSTART` | `1` (`0`이면 서버를 직접 띄워 둬야 합니다) |
+| `LOCALTTS_PYTHON` | 이 MCP 서버를 실행한 파이썬 (서버를 띄울 때 씁니다) |
+
+서버가 새로 뜬 뒤 첫 `transcribe`는 Whisper 가중치를 GPU로 올리느라 10초 안팎 걸리고(맨 처음 한 번은 약 3GB를 내려받습니다), 그다음부터는 바로 응답합니다. `synthesize`는 1초 안팎입니다.
+
+## Python에서 바로 쓰기
+
+```python
+import sys; sys.path.insert(0, r"<LocalTTS 폴더>")   # 또는 이 venv에서 실행
+import localtts
+audio, sr = localtts.synthesize("こんにちは", voice="jf_alpha")
+localtts.save_wav("out.wav", audio, sr)
+
+from localtts.jp2hangul import ja_to_hangul
+ja_to_hangul("ありがとう")                       # '아리가토'
+ja_to_hangul("ありがとう", {"long_vowel": "keep"})  # '아리가토오'
+```
+
+`jp2hangul`은 fugashi와 unidic-lite만 있으면 다른 venv에서도 import됩니다.
+
+## 명령줄
+
+```bash
+python -m localtts voices
+python -m localtts say "こんにちは" -o out.wav --voice jf_alpha
+python -m localtts say "こんにちは" -o out.wav --voice st_F1 --translit ja_to_hangul
+python -m localtts hangul "東京タワーで待ってる"
+python -m localtts transcribe out.wav --language ja
+```
+
+## 한글 독음 (`ja_to_hangul`) 규칙
+
+UniDic(fugashi + unidic-lite)의 발음으로 한자를 읽은 뒤, 한국인이 일본어를 읽는 방식에 가깝게 바꿉니다. 공식 외래어 표기법이 아니라 발음 근사입니다.
+
+| 항목 | 기본값 | `translit_style`로 바꿀 수 있는 값 |
+|---|---|---|
+| `tsu` (つ) | `ㅊ` → 츠 | `ㅅ` → 쓰, `ㅉ` → 쯔 |
+| `initial` (어두 무성음) | `aspirated` → 카·타 | `plain` → 가·다 (표기법식) |
+| `long_vowel` (장음) | `drop` → 토 | `keep` → 토오 |
+| `n_assim` (ㅁ·ㅂ·ㅍ 앞 ん) | `false` → ㄴ | `true` → ㅁ |
+
+항상 적용되는 규칙: っ → 받침 ㅅ, ん → 받침 ㄴ, ス·ズ → 스·즈, ファ행 → ㅍ, 어절 사이 띄어쓰기. 라틴 문자 구간은 그대로 둡니다. 가사처럼 특수한 읽기(当て字·루비)는 사전 읽기와 다를 수 있습니다.
+
+## 설치 (Windows, Python 3.14)
+
+```bash
+py -3.14 -m venv venv
+venv\Scripts\python -m pip install torch==2.14.1 --index-url https://download.pytorch.org/whl/cu126
+venv\Scripts\python -m pip install -r requirements.txt
+venv\Scripts\python -m pip install --no-deps kokoro
+venv\Scripts\python -m pip install --no-deps --ignore-requires-python misaki==0.9.4
+venv\Scripts\python -m pip install --no-deps -e .
+```
+
+모델 가중치(Whisper large-v3 약 3GB, Kokoro, Supertonic)는 처음 쓸 때 Hugging Face 캐시(`~/.cache/huggingface`)로 받습니다. GPU 메모리는 Whisper와 Kokoro를 함께 올려도 약 4.5GB(RTX 3070 8GB에서 확인)입니다.
+
+## 테스트
+
+```bash
+venv\Scripts\python -X utf8 -m unittest discover -s tests
+```
+
+33개, 모델도 GPU도 쓰지 않아 0.1초 안에 끝납니다. 검사하는 것은 정답이 정해져 있는 두 곳입니다.
+
+- **독음 규칙** (`jp2hangul`): っ·ん 받침, ス·ズ, ファ행, 요음, 띄어쓰기 같은 항상 적용되는 규칙과, `translit_style` 네 가지 옵션을 양쪽 값에서 하나씩. 옵션 조합 24가지 전부에 대해 **가나가 한 글자도 남지 않는지**도 봅니다(새 규칙이 기존 가나를 빠뜨리면 여기서 걸립니다).
+- **긴 글 분할** (`supertonic_backend._chunks`): 모든 덩이가 한계 이하인지, 빈 덩이가 없는지, 글자가 사라지지 않는지, 경계(79/80/81자)에서 어떻게 잘리는지.
+
+음성 자체는 자동으로 검사할 수 없습니다. 귀로 확인하거나, 합성한 wav를 Whisper로 받아쓰기해서 입력과 비교하는 방법을 씁니다(`_chunks`의 80자 한계도 그렇게 확인했습니다).
+
+## 결정 기록
+
+설계 결정과 그 이유는 [docs/adr/](docs/adr/README.md)에 있습니다.
+
+## Python 3.14에서 우회한 것
+
+- **kokoro**는 `numpy==1.26.4`를 고정하는데 3.14용 빌드가 없습니다. 그래서 `--no-deps`로 설치합니다(최신 numpy로 동작 확인).
+- **misaki 0.9.4**는 3.13 미만으로 표시돼 있지만 순수 파이썬이라 그대로 씁니다.
+  - kokoro 0.7 파이프라인과 반환 형식이 달라서, `kokoro_backend`가 g2p와 모델을 직접 호출합니다.
+- **mojimoji**(Cython, 3.14 빌드 없음)는 `jaconv` 기반 대체 모듈(`_mojimoji_shim.py`)로 바꿨습니다.
+- **spacy**는 3.14 빌드가 없어 영어·중국어 Kokoro 목소리는 쓸 수 없습니다.
+  - 일본어는 spacy 없이 동작하도록 빈 대체 모듈을 끼웁니다.
+  - 영어가 필요하면 Supertonic(`st_*`, `lang="en"`)을 쓰면 됩니다.
+- **Supertonic GPU 실행:** 패키지 기본값은 CPU 전용입니다. onnxruntime-gpu가 깔려 있으면 백엔드가 CUDA 실행기를 켭니다.
+  - 9.5초 음성 기준 CPU 9.2초 → GPU 0.17초로 빨라졌습니다.
+  - onnxruntime-gpu 1.31은 CUDA 13 DLL(`cublasLt64_13.dll`)을 요구해서, torch cu126과 맞는 1.24.1로 고정했습니다. 필요한 CUDA·cuDNN DLL은 먼저 불러온 torch가 제공합니다.
+- **torch와 winrt** 순서: winrt를 먼저 불러오면 torch DLL 초기화가 실패(WinError 1114)해서, 패키지가 torch를 먼저 불러옵니다.
+
+## 라이선스
+
+이 저장소의 코드는 [MIT](LICENSE)입니다. 엔진과 모델 가중치는 위 「들어 있는 것」 표에 적은 각자의 라이선스를 따릅니다(가중치는 저장소에 들어 있지 않습니다).
