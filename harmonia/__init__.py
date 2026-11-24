@@ -1,12 +1,12 @@
-"""LocalTTS: local text-to-speech (and Whisper speech-to-text) for any project.
+"""Harmonia: local text-to-speech (and Whisper speech-to-text) for any project.
 
 Python:
-    from localtts import synthesize, save_wav
+    from harmonia import synthesize, save_wav
     audio, sr = synthesize('こんにちは', voice='jf_alpha')
     save_wav('out.wav', audio, sr)
 
 HTTP (OpenAI-compatible, see server.py):
-    python -m localtts serve            # http://127.0.0.1:8880/v1
+    python -m harmonia serve            # http://127.0.0.1:8880/v1
 """
 import io
 

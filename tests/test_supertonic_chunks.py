@@ -1,4 +1,4 @@
-"""Text splitting in localtts/supertonic_backend.py.
+"""Text splitting in harmonia/supertonic_backend.py.
 
 Supertonic's vector estimator attends over a limited number of latent frames per
 chunk; feed it more and the tail of the audio comes out garbled or missing (checked
@@ -7,8 +7,8 @@ These tests cover the splitting only -- they load no model, so they are fast.
 """
 import unittest
 
-from localtts.supertonic_backend import MAX_CHUNK_CHARS as LIMIT
-from localtts.supertonic_backend import _chunks
+from harmonia.supertonic_backend import MAX_CHUNK_CHARS as LIMIT
+from harmonia.supertonic_backend import _chunks
 
 
 class Chunks(unittest.TestCase):

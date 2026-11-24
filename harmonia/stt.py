@@ -8,7 +8,7 @@ import threading
 
 import numpy as np
 
-DEFAULT_MODEL = os.getenv('LOCALTTS_WHISPER_MODEL', 'openai/whisper-large-v3')
+DEFAULT_MODEL = os.getenv('HARMONIA_WHISPER_MODEL', 'openai/whisper-large-v3')
 TARGET_SR = 16000
 
 _models = {}

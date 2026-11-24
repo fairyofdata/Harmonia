@@ -1,10 +1,10 @@
 """CLI.
 
-    python -m localtts voices
-    python -m localtts say "こんにちは" -o out.wav [--voice jf_alpha] [--speed 1.0] [--translit ja_to_hangul]
-    python -m localtts hangul "こんにちは"
-    python -m localtts transcribe out.wav [--language ja]
-    python -m localtts serve [--port 8880]
+    python -m harmonia voices
+    python -m harmonia say "こんにちは" -o out.wav [--voice jf_alpha] [--speed 1.0] [--translit ja_to_hangul]
+    python -m harmonia hangul "こんにちは"
+    python -m harmonia transcribe out.wav [--language ja]
+    python -m harmonia serve [--port 8880]
 """
 import argparse
 import json
@@ -12,7 +12,7 @@ import sys
 
 
 def main():
-    ap = argparse.ArgumentParser(prog='localtts')
+    ap = argparse.ArgumentParser(prog='harmonia')
     sub = ap.add_subparsers(dest='cmd', required=True)
     sub.add_parser('voices')
     say = sub.add_parser('say')
@@ -33,23 +33,23 @@ def main():
 
     sys.stdout.reconfigure(encoding='utf-8')
     if args.cmd == 'voices':
-        import localtts
-        for v in localtts.list_voices():
+        import harmonia
+        for v in harmonia.list_voices():
             print(f"{v['id']:<16} {v['backend']:<8} {v['language']:<6} {v['name']}")
     elif args.cmd == 'say':
-        import localtts
-        audio, sr = localtts.synthesize(args.text, voice=args.voice, speed=args.speed, translit=args.translit,
+        import harmonia
+        audio, sr = harmonia.synthesize(args.text, voice=args.voice, speed=args.speed, translit=args.translit,
                                         lang=args.lang)
-        localtts.save_wav(args.out, audio, sr)
+        harmonia.save_wav(args.out, audio, sr)
         print(f'{args.out} ({len(audio) / sr:.2f}s, {sr} Hz)')
     elif args.cmd == 'hangul':
-        from localtts.jp2hangul import ja_to_hangul
+        from harmonia.jp2hangul import ja_to_hangul
         print(ja_to_hangul(args.text))
     elif args.cmd == 'transcribe':
-        from localtts import stt
+        from harmonia import stt
         print(json.dumps(stt.transcribe(args.path, language=args.language), ensure_ascii=False))
     elif args.cmd == 'serve':
-        from localtts.server import serve
+        from harmonia.server import serve
         serve(port=args.port)
 
 

@@ -3,15 +3,15 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "localtts"
+name = "harmonia"
 version = "0.1.0"
 description = "Local TTS (Kokoro, Supertonic, Windows voices) and Whisper STT, as an OpenAI-compatible HTTP server and an MCP server"
 requires-python = ">=3.12"
 
 [project.scripts]
-localtts = "localtts.__main__:main"
-localtts-mcp = "localtts_mcp:main"
+harmonia = "harmonia.__main__:main"
+harmonia-mcp = "harmonia_mcp:main"
 
 [tool.setuptools]
-packages = ["localtts"]
-py-modules = ["localtts_mcp"]
+packages = ["harmonia"]
+py-modules = ["harmonia_mcp"]

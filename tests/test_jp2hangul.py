@@ -1,4 +1,4 @@
-"""Rules of localtts/jp2hangul.py, the one part of LocalTTS with an exact expected output.
+"""Rules of harmonia/jp2hangul.py, the one part of Harmonia with an exact expected output.
 
     python -m unittest discover -s tests
 
@@ -9,7 +9,7 @@ that is what this file is for.
 import re
 import unittest
 
-from localtts.jp2hangul import (DEFAULT_STYLE, SMALL_V, SMALL_Y, SYLLABLE, ja_to_hangul,
+from harmonia.jp2hangul import (DEFAULT_STYLE, SMALL_V, SMALL_Y, SYLLABLE, ja_to_hangul,
                                 kana_to_hangul)
 
 KANA = re.compile(r'[ぁ-ゖァ-ヺー]')   # hiragana, katakana, 'ー'

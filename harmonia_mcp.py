@@ -1,19 +1,19 @@
-r"""MCP server for LocalTTS: this PC's speech synthesis and transcription as MCP tools,
+r"""MCP server for Harmonia: this PC's speech synthesis and transcription as MCP tools,
 so any project (Claude Code, an editor, your own agent) can call them.
 
-    claude mcp add localtts -- <LocalTTS 폴더>\venv\Scripts\python.exe -m localtts_mcp
+    claude mcp add harmonia -- <Harmonia 폴더>\venv\Scripts\python.exe -m harmonia_mcp
 
-It is a thin proxy over the HTTP server (`python -m localtts serve`): every tool is one
+It is a thin proxy over the HTTP server (`python -m harmonia serve`): every tool is one
 HTTP call, and the server is started in the background on first use if it is not already
 running. The models therefore load once on this PC however many projects call in -- and
-this process itself holds no model, which is why this module sits outside the `localtts`
+this process itself holds no model, which is why this module sits outside the `harmonia`
 package (importing that package imports torch).
 
 Environment:
-    LOCALTTS_URL        server base url (default http://127.0.0.1:8880)
-    LOCALTTS_OUT_DIR    where synthesized wav files are written (default <temp>/localtts)
-    LOCALTTS_AUTOSTART  '0' to never start the server from here
-    LOCALTTS_PYTHON     python that has localtts installed (default: the one running this)
+    HARMONIA_URL        server base url (default http://127.0.0.1:8880)
+    HARMONIA_OUT_DIR    where synthesized wav files are written (default <temp>/harmonia)
+    HARMONIA_AUTOSTART  '0' to never start the server from here
+    HARMONIA_PYTHON     python that has harmonia installed (default: the one running this)
 """
 import base64
 import json
@@ -33,13 +33,13 @@ from mcp.server.mcpserver import MCPServer
 from mcp.server.mcpserver.exceptions import ToolError   # anything else reaches the caller as
                                                         # a bare 'Error executing tool <name>'
 
-BASE_URL = os.getenv('LOCALTTS_URL', 'http://127.0.0.1:8880').rstrip('/')
-OUT_DIR = Path(os.getenv('LOCALTTS_OUT_DIR') or Path(tempfile.gettempdir()) / 'localtts')
+BASE_URL = os.getenv('HARMONIA_URL', 'http://127.0.0.1:8880').rstrip('/')
+OUT_DIR = Path(os.getenv('HARMONIA_OUT_DIR') or Path(tempfile.gettempdir()) / 'harmonia')
 CREATE_BREAKAWAY_FROM_JOB = 0x01000000   # not in subprocess; see _start_server
 START_TIMEOUT = 90          # uvicorn comes up in a second; models load lazily per endpoint
 CALL_TIMEOUT = 900          # a first call downloads model weights (Whisper large-v3 is ~3 GB)
 
-server = MCPServer(name='localtts')
+server = MCPServer(name='harmonia')
 
 
 # --- the HTTP server ---------------------------------------------------------------
@@ -53,13 +53,13 @@ def _healthy(timeout=1.0):
 
 
 def _start_server():
-    """Launch `localtts serve` in the background, to be shared with every other project.
+    """Launch `harmonia serve` in the background, to be shared with every other project.
 
     MCP clients put their servers in a Windows job object that kills every member on
     shutdown, and breaking out of it only escapes the innermost job, so expect this
     server to go down with the MCP client that started it. The next call starts it
     again (weights come from the local Hugging Face cache, so that costs seconds).
-    Run `python -m localtts serve` yourself to keep one up permanently; this never
+    Run `python -m harmonia serve` yourself to keep one up permanently; this never
     stops a server it did not start.
     """
     url = urllib.parse.urlsplit(BASE_URL)
@@ -67,7 +67,7 @@ def _start_server():
         raise ToolError(f'{BASE_URL} is not local; start the server there yourself')
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     log = open(OUT_DIR / 'server.log', 'ab')
-    cmd = [os.getenv('LOCALTTS_PYTHON') or sys.executable, '-m', 'localtts', 'serve',
+    cmd = [os.getenv('HARMONIA_PYTHON') or sys.executable, '-m', 'harmonia', 'serve',
            '--port', str(url.port or 8880)]
 
     def spawn(flags):
@@ -88,17 +88,17 @@ def _start_server():
             return
         if proc.poll() is not None:
             tail = (OUT_DIR / 'server.log').read_text('utf-8', 'replace')[-800:]
-            raise ToolError(f'localtts serve exited ({proc.returncode}):\n{tail}')
+            raise ToolError(f'harmonia serve exited ({proc.returncode}):\n{tail}')
         time.sleep(0.3)
-    raise ToolError(f'localtts serve did not answer on {BASE_URL} within {START_TIMEOUT}s')
+    raise ToolError(f'harmonia serve did not answer on {BASE_URL} within {START_TIMEOUT}s')
 
 
 def _ensure_server():
     if _healthy():
         return
-    if os.getenv('LOCALTTS_AUTOSTART', '1') == '0':
-        raise ToolError(f'no server on {BASE_URL} and LOCALTTS_AUTOSTART=0; '
-                        f'run: python -m localtts serve')
+    if os.getenv('HARMONIA_AUTOSTART', '1') == '0':
+        raise ToolError(f'no server on {BASE_URL} and HARMONIA_AUTOSTART=0; '
+                        f'run: python -m harmonia serve')
     _start_server()
 
 
@@ -152,7 +152,7 @@ def synthesize(text: str, voice: str = 'st_F2', lang: str | None = None, speed: 
                     win_haruka / win_heami etc. (Windows voices). list_voices() has all.
     lang:           ISO code for Supertonic voices: 'ko', 'ja', 'en', ... Ignored by others.
     speed:          1.0 is normal.
-    out_path:       where to write; defaults to a new file under LOCALTTS_OUT_DIR.
+    out_path:       where to write; defaults to a new file under HARMONIA_OUT_DIR.
     translit:        'ja_to_hangul' reads Japanese text as Hangul, so a Korean voice can
                     say it (implies lang='ko'). See ja_to_hangul() for translit_style.
     pitch:          Windows voices only, 0.0-2.0.

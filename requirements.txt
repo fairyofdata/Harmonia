@@ -30,4 +30,4 @@ addict
 pyopenjtalk-plus
 supertonic
 onnxruntime-gpu==1.24.1  # works with CUDA 12 (torch cu126); 1.31 needs CUDA 13. CPU-only: onnxruntime
-mcp                      # MCP server (localtts_mcp); not needed for the CLI or the HTTP server
+mcp                      # MCP server (harmonia_mcp); not needed for the CLI or the HTTP server

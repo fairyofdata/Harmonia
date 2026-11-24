@@ -1,6 +1,8 @@
 <!-- 원본: README_KR.md (한국어판이 원본, 영·일은 번역) · 동기화: 2026-11-24 -->
 
-# LocalTTS
+# Harmonia
+
+옛 이름 LocalTTS(2026-11-24 개명, [ADR-0007](docs/adr/0007-rename-to-harmonia.md)).
 
 이 PC에서 동작하는 음성 합성(TTS)·음성 인식(STT) 도구입니다. 클라우드 호출과 비용이 없습니다. 다른 프로젝트에서 쓰는 길이 두 가지입니다.
 
@@ -17,14 +19,14 @@
 | STT | Whisper large-v3 (GPU fp16) | — | 다국어, 언어 자동 감지 또는 지정 | MIT |
 | 변환 | 일본어 → 한국인식 한글 독음 (`ja_to_hangul`) | — | — | 이 저장소 |
 
-`python -m localtts voices`로 이 PC에서 쓸 수 있는 목소리 목록을 봅니다.
+`python -m harmonia voices`로 이 PC에서 쓸 수 있는 목소리 목록을 봅니다.
 
 Supertonic은 어휘에 없는 글자(드문 한자 등)가 있으면 오류를 냅니다. 그래서 그런 글자가 든 단어는 UniDic의 가나 읽기로 바꿔 읽고, 그래도 남는 글자는 빼고 읽습니다. 또 한 번에 처리할 수 있는 길이에 한계가 있어서 긴 글은 80자 조각으로 나눠 합성하고 조각 사이에 0.15초 쉼을 둡니다(공백이 없는 일본어·중국어는 글자 수로 끊습니다).
 
 ## 서버로 쓰기 (다른 프로젝트에서)
 
 ```bash
-<LocalTTS 폴더>\venv\Scripts\python.exe -m localtts serve --port 8880
+<Harmonia 폴더>\venv\Scripts\python.exe -m harmonia serve --port 8880
 ```
 
 `127.0.0.1`에만 열리므로 외부에서는 접근할 수 없습니다.
@@ -65,20 +67,20 @@ OpenAI API에 없는 확장:
 Claude Code 설정(`~/.claude.json`)의 최상위 `mcpServers`에 넣으면 모든 프로젝트에서 보입니다.
 
 ```json
-"localtts": {
+"harmonia": {
   "type": "stdio",
-  "command": "<LocalTTS 폴더>\\venv\\Scripts\\python.exe",
-  "args": ["-m", "localtts_mcp"],
+  "command": "<Harmonia 폴더>\\venv\\Scripts\\python.exe",
+  "args": ["-m", "harmonia_mcp"],
   "env": {}
 }
 ```
 
-`command`는 **이 프로젝트 venv의 python**이어야 합니다. `mcp`와 `localtts`가 거기에만 깔려 있고, 서버를 자동으로 띄울 때도 이 파이썬을 씁니다. 고친 뒤에는 앱(또는 `claude`)을 다시 시작해야 잡힙니다.
+`command`는 **이 프로젝트 venv의 python**이어야 합니다. `mcp`와 `harmonia`가 거기에만 깔려 있고, 서버를 자동으로 띄울 때도 이 파이썬을 씁니다. 고친 뒤에는 앱(또는 `claude`)을 다시 시작해야 잡힙니다.
 
 `claude` CLI가 깔려 있다면 같은 자리에 넣어 줍니다. `-s user`가 없으면 명령을 실행한 폴더에서만 보입니다.
 
 ```bash
-claude mcp add localtts -s user -- <LocalTTS 폴더>\venv\Scripts\python.exe -m localtts_mcp
+claude mcp add harmonia -s user -- <Harmonia 폴더>\venv\Scripts\python.exe -m harmonia_mcp
 ```
 
 도구 다섯 개가 붙습니다.
@@ -91,28 +93,28 @@ claude mcp add localtts -s user -- <LocalTTS 폴더>\venv\Scripts\python.exe -m 
 | `transcribe_many` | 여러 파일을 GPU에서 한 번에 (클립당 약 0.3초) |
 | `ja_to_hangul` | 일본어 → 한글 독음 |
 
-MCP 서버는 위의 HTTP 서버에 요청만 전달하는 얇은 프록시입니다. 서버가 안 떠 있으면 **처음 호출할 때 백그라운드로 띄웁니다.** 그래서 동시에 여러 프로젝트에서 불러도 모델은 이 PC에 한 벌만 올라가고, MCP 프로세스 자체는 모델을 들고 있지 않습니다(torch도 부르지 않아 0.7초면 뜹니다). 이 때문에 `localtts_mcp.py`는 패키지 밖에 있습니다 — `localtts`를 import하면 torch가 따라옵니다.
+MCP 서버는 위의 HTTP 서버에 요청만 전달하는 얇은 프록시입니다. 서버가 안 떠 있으면 **처음 호출할 때 백그라운드로 띄웁니다.** 그래서 동시에 여러 프로젝트에서 불러도 모델은 이 PC에 한 벌만 올라가고, MCP 프로세스 자체는 모델을 들고 있지 않습니다(torch도 부르지 않아 0.7초면 뜹니다). 이 때문에 `harmonia_mcp.py`는 패키지 밖에 있습니다 — `harmonia`를 import하면 torch가 따라옵니다.
 
-자동으로 띄운 서버는 **MCP 클라이언트가 끝날 때 같이 내려갈 수 있습니다.** MCP 클라이언트가 서버 프로세스를 잡 오브젝트에 넣고 종료 시 통째로 정리하기 때문입니다(확인함). 다시 부르면 알아서 올라오고, 가중치는 로컬 캐시에서 읽으므로 몇 초면 됩니다. 계속 띄워 두고 싶으면 `python -m localtts serve`를 직접 실행해 두면 됩니다. 그 서버는 MCP가 건드리지 않습니다.
+자동으로 띄운 서버는 **MCP 클라이언트가 끝날 때 같이 내려갈 수 있습니다.** MCP 클라이언트가 서버 프로세스를 잡 오브젝트에 넣고 종료 시 통째로 정리하기 때문입니다(확인함). 다시 부르면 알아서 올라오고, 가중치는 로컬 캐시에서 읽으므로 몇 초면 됩니다. 계속 띄워 두고 싶으면 `python -m harmonia serve`를 직접 실행해 두면 됩니다. 그 서버는 MCP가 건드리지 않습니다.
 
 | 환경 변수 | 기본값 |
 |---|---|
-| `LOCALTTS_URL` | `http://127.0.0.1:8880` |
-| `LOCALTTS_OUT_DIR` | `<temp>/localtts` (합성한 wav와 서버 로그가 쌓이는 곳) |
-| `LOCALTTS_AUTOSTART` | `1` (`0`이면 서버를 직접 띄워 둬야 합니다) |
-| `LOCALTTS_PYTHON` | 이 MCP 서버를 실행한 파이썬 (서버를 띄울 때 씁니다) |
+| `HARMONIA_URL` | `http://127.0.0.1:8880` |
+| `HARMONIA_OUT_DIR` | `<temp>/harmonia` (합성한 wav와 서버 로그가 쌓이는 곳) |
+| `HARMONIA_AUTOSTART` | `1` (`0`이면 서버를 직접 띄워 둬야 합니다) |
+| `HARMONIA_PYTHON` | 이 MCP 서버를 실행한 파이썬 (서버를 띄울 때 씁니다) |
 
 서버가 새로 뜬 뒤 첫 `transcribe`는 Whisper 가중치를 GPU로 올리느라 10초 안팎 걸리고(맨 처음 한 번은 약 3GB를 내려받습니다), 그다음부터는 바로 응답합니다. `synthesize`는 1초 안팎입니다.
 
 ## Python에서 바로 쓰기
 
 ```python
-import sys; sys.path.insert(0, r"<LocalTTS 폴더>")   # 또는 이 venv에서 실행
-import localtts
-audio, sr = localtts.synthesize("こんにちは", voice="jf_alpha")
-localtts.save_wav("out.wav", audio, sr)
+import sys; sys.path.insert(0, r"<Harmonia 폴더>")   # 또는 이 venv에서 실행
+import harmonia
+audio, sr = harmonia.synthesize("こんにちは", voice="jf_alpha")
+harmonia.save_wav("out.wav", audio, sr)
 
-from localtts.jp2hangul import ja_to_hangul
+from harmonia.jp2hangul import ja_to_hangul
 ja_to_hangul("ありがとう")                       # '아리가토'
 ja_to_hangul("ありがとう", {"long_vowel": "keep"})  # '아리가토오'
 ```
@@ -122,11 +124,11 @@ ja_to_hangul("ありがとう", {"long_vowel": "keep"})  # '아리가토오'
 ## 명령줄
 
 ```bash
-python -m localtts voices
-python -m localtts say "こんにちは" -o out.wav --voice jf_alpha
-python -m localtts say "こんにちは" -o out.wav --voice st_F1 --translit ja_to_hangul
-python -m localtts hangul "東京タワーで待ってる"
-python -m localtts transcribe out.wav --language ja
+python -m harmonia voices
+python -m harmonia say "こんにちは" -o out.wav --voice jf_alpha
+python -m harmonia say "こんにちは" -o out.wav --voice st_F1 --translit ja_to_hangul
+python -m harmonia hangul "東京タワーで待ってる"
+python -m harmonia transcribe out.wav --language ja
 ```
 
 ## 한글 독음 (`ja_to_hangul`) 규칙

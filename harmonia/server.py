@@ -20,10 +20,10 @@ from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 from pydantic import BaseModel
 
-import localtts
-from localtts import stt
+import harmonia
+from harmonia import stt
 
-app = FastAPI(title='LocalTTS')
+app = FastAPI(title='Harmonia')
 
 
 class SpeechRequest(BaseModel):
@@ -45,7 +45,7 @@ def health():
 
 @app.get('/v1/voices')
 def voices():
-    return {'voices': localtts.list_voices()}
+    return {'voices': harmonia.list_voices()}
 
 
 class TranslitRequest(BaseModel):
@@ -58,7 +58,7 @@ class TranslitRequest(BaseModel):
 def translit(req: TranslitRequest):
     """Reading conversion on its own, without synthesizing (not in the OpenAI API)."""
     try:
-        return {'text': localtts._translit(req.translit, req.text, req.translit_style)}
+        return {'text': harmonia._translit(req.translit, req.text, req.translit_style)}
     except ValueError as e:
         raise HTTPException(400, str(e))
 
@@ -68,7 +68,7 @@ def speech(req: SpeechRequest):
     if req.response_format not in ('wav', 'pcm'):
         raise HTTPException(400, 'response_format must be wav or pcm (no ffmpeg encoder here)')
     try:
-        audio, sr = localtts.synthesize(req.input, voice=req.voice, speed=req.speed, translit=req.translit,
+        audio, sr = harmonia.synthesize(req.input, voice=req.voice, speed=req.speed, translit=req.translit,
                                         translit_style=req.translit_style, pitch=req.pitch, lang=req.lang)
     except ValueError as e:
         raise HTTPException(400, str(e))
@@ -76,7 +76,7 @@ def speech(req: SpeechRequest):
         import numpy as np
         pcm = (np.clip(audio, -1, 1) * 32767).astype('<i2').tobytes()
         return Response(pcm, media_type='audio/pcm', headers={'X-Sample-Rate': str(sr)})
-    return Response(localtts.to_wav_bytes(audio, sr), media_type='audio/wav')
+    return Response(harmonia.to_wav_bytes(audio, sr), media_type='audio/wav')
 
 
 @app.post('/v1/audio/transcriptions')

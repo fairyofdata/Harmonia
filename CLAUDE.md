@@ -1,4 +1,4 @@
-# LocalTTS — 작업 규칙
+# Harmonia — 작업 규칙
 
 이 PC에서 동작하는 음성 합성(TTS)·음성 인식(STT) 도구. OpenAI 호환 HTTP 서버와 MCP 서버로 다른 프로젝트가 쓴다. 공개 예정.
 
@@ -17,15 +17,15 @@
 |---|---|
 | `README.md` | 엔진·목소리·쓰는 법 |
 | `docs/adr/README.md` | 결정 기록 |
-| `localtts/`·`tests/` | 코드·테스트 |
+| `harmonia/`·`tests/` | 코드·테스트 |
 
 ## 이 프로젝트의 규칙
 
-- **공개 예정 저장소라 처음부터 공개 위생을 지킨다.** 개인 경로는 `<LocalTTS 폴더>` 같은 자리표시로 — 공개할 때 git 이력에 남은 것은 빼기 어렵다.
+- **공개 예정 저장소라 처음부터 공개 위생을 지킨다.** 개인 경로는 `<Harmonia 폴더>` 같은 자리표시로 — 공개할 때 git 이력에 남은 것은 빼기 어렵다.
 - **모델 가중치는 저장소에 넣지 않는다.** 각 엔진의 라이선스는 README 표에 적는다(코드 라이선스와 별개).
 - **테스트는 GPU·모델 없이 돈다**(`numpy fugashi unidic-lite`만). 무거운 의존성이 테스트로 새면 CI가 깨진다.
 
 ## 명령
 
 - 테스트: `python -m unittest discover -s tests`
-- 서버: `python -m localtts serve`
+- 서버: `python -m harmonia serve`
