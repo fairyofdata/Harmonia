@@ -1,4 +1,4 @@
-<!-- Source: README_KR.md (Korean is the source; English and Japanese are translations) · synced 2026-11-24 -->
+<!-- Source: README_KR.md (Korean is the source; English and Japanese are translations) · synced 2026-11-26 -->
 
 # Harmonia
 
@@ -10,6 +10,8 @@ Text-to-speech (TTS) and speech-to-text (STT) that run on this PC. No cloud call
 
 - **HTTP server**: same format as the OpenAI API, so only `base_url` changes ([below](#use-as-a-server-from-other-projects)).
 - **MCP server**: agents call it directly as tools ([below](#use-over-mcp-from-agents-in-other-projects)).
+
+*Harmonia* is Latin for "harmony" (from Greek *harmonía*, "a fitting together"): text into voice and voice into text, tuned in one place.
 
 ## What is inside
 
